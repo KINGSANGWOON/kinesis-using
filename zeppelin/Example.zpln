@@ -1,0 +1,181 @@
+﻿{
+ "paragraphs": [
+  {
+   "user": "anonymous",
+   "config": {
+    "colWidth": 12,
+    "fontSize": 9,
+    "enabled": true,
+    "results": {},
+    "editorSetting": {
+     "language": "scala",
+     "editOnDblClick": false,
+     "completionKey": "TAB",
+     "completionSupport": true
+    },
+    "editorMode": "ace/mode/scala"
+   },
+   "settings": {
+    "params": {},
+    "forms": {}
+   },
+   "apps": [],
+   "jobName": "paragraph_1563110258183_1613653816",
+   "id": "20190714-161738_1950435706",
+   "dateCreated": "2019-07-14T16:17:38+0300",
+   "status": "READY",
+   "progressUpdateIntervalMs": 500,
+   "focus": true,
+   "$$hashKey": "object:394",
+   "text": "%flink.ssql\n\nDROP TABLE IF EXISTS stock_table;\n\nCREATE TABLE stock_table (\n    `TICKER` VARCHAR(4),\n    `EVENT_TIME` TIMESTAMP(3),\n    `PRICE` FLOAT\n)\nWITH (\n    'connector' = 'kinesis',\n    'stream' = 'ExampleInputStream',\n    'aws.region' = 'us-east-1',\n    'scan.stream.initpos' = 'LATEST',\n    'format' = 'json',\n    'json.timestamp-format.standard' = 'ISO-8601'\n)"
+  },
+  {
+   "settings": {
+    "params": {},
+    "forms": {}
+   },
+   "apps": [],
+   "status": "READY",
+   "text": "%flink.ssql(type=update)\n\nSELECT * FROM stock_table",
+   "config": {}
+  },
+  {
+   "settings": {
+    "params": {},
+    "forms": {}
+   },
+   "apps": [],
+   "status": "READY",
+   "text": "%flink.ssql(type=update)\n\nSELECT TICKER, COUNT(*) AS `COUNT`\nFROM stock_table \nGROUP BY TICKER",
+   "config": {}
+  },
+  {
+   "settings": {
+    "params": {},
+    "forms": {}
+   },
+   "apps": [],
+   "status": "READY",
+   "text": "%flink.ssql(type=update)\n\nDROP TABLE IF EXISTS s3_sink_table;\n \nCREATE TABLE s3_sink_table(\n    `TICKER` VARCHAR(4),\n    `EVENT_TIME` TIMESTAMP(3),\n    `PRICE` FLOAT\n)\nPARTITIONED BY(TICKER)\nWITH (\n    'connector' = 'filesystem',\n    'path' = 's3://ka-app-pmj/data',\n    'format' = 'json',\n    'sink.partition-commit.policy.kind'='success-file', -- sink 성공시 '_SUCCESS' 파일 같이 업로드 PARTITIONED BY 랑 짝궁 \n    'sink.partition-commit.delay' = '1 min' -- 왜 쓰는지 잘 모름 PARTITIONED BY 랑 짝궁\n)",
+   "id": "",
+   "config": {}
+  },
+  {
+   "settings": {
+    "params": {},
+    "forms": {}
+   },
+   "apps": [],
+   "status": "READY",
+   "text": "%flink.pyflink\nst_env.get_config().get_configuration().set_string(\n    \"restart-strategy\", \"fixed-delay\"\n)\n\nst_env.get_config().get_configuration().set_string(\n    \"restart-strategy.fixed-delay.attempts\", \"3\"\n)\n\nst_env.get_config().get_configuration().set_string(\n    \"restart-strategy.fixed-delay.delay\", \"30s\"\n)\n\nst_env.get_config().get_configuration().set_string(\n    \"execution.checkpointing.mode\", \"AT_LEAST_ONCE\" -- \"EXACTLY_ONCE\" OR \"AT_LEAST_ONCE\"   \n)\n\nst_env.get_config().get_configuration().set_string(\n    \"execution.checkpointing.interval\", \"1min\"    \n)",
+   "id": "",
+   "config": {}
+  },
+  {
+   "settings": {
+    "params": {},
+    "forms": {}
+   },
+   "apps": [],
+   "status": "READY",
+   "text": "%flink.ssql(type=update)\nINSERT INTO s3_sink_table\n SELECT * \n FROM stock_table\n",
+   "id": "",
+   "config": {}
+  },
+  {
+   "settings": {
+    "params": {},
+    "forms": {}
+   },
+   "apps": [],
+   "status": "READY",
+   "text": "%flink.ssql(type=update)\nINSERT INTO s3_sink_table \nPARTITION(TICKER='MSFT')\nSELECT EVENT_TIME, PRICE \nFROM stock_table\n",
+   "id": "",
+   "config": {}
+  },
+  {
+   "settings": {
+    "params": {},
+    "forms": {}
+   },
+   "apps": [],
+   "status": "READY",
+   "config": {},
+   "text": "%md\n## Time Series Analytics"
+  },
+  {
+   "settings": {
+    "params": {},
+    "forms": {}
+   },
+   "apps": [],
+   "status": "READY",
+   "text": "%flink.ssql\n\nDROP TABLE IF EXISTS stock_table;\n\nCREATE TABLE stock_table (\n    `TICKER` VARCHAR(4),\n    `EVENT_TIME` TIMESTAMP(3),\n    `PRICE` FLOAT,\n    WATERMARK FOR `EVENT_TIME` AS `EVENT_TIME` - INTERVAL '1' MINUTE\n)\nWITH (\n    'connector' = 'kinesis',\n    'stream' = 'ExampleInputStream',\n    'aws.region' = 'us-east-1',\n    'format' = 'json',\n    'json.timestamp-format.standard' = 'ISO-8601'\n)\n",
+   "id": "",
+   "config": {}
+  },
+  {
+   "settings": {
+    "params": {},
+    "forms": {}
+   },
+   "apps": [],
+   "status": "READY",
+   "config": {},
+   "text": "%flink.ssql(type=update)\n\nSELECT TICKER, COUNT(*) AS `COUNT` \nFROM stock_table \nGROUP BY TICKER, HOP(EVENT_TIME, INTERVAL '25' SECOND, INTERVAL '30' SECOND)\n"
+  },
+  {
+   "settings": {
+    "params": {},
+    "forms": {}
+   },
+   "apps": [],
+   "status": "READY",
+   "text": "%flink.ssql(type=update)\n\nSELECT TICKER, COUNT(*), window_start, window_end\nFROM TABLE(\n    TUMBLE(TABLE stock_table, DESCRIPTOR(EVENT_TIME), INTERVAL '1' MINUTE)\n)\nGROUP BY TICKER, window_start, window_end",
+   "config": {}
+  },
+  {
+   "settings": {
+    "params": {},
+    "forms": {}
+   },
+   "apps": [],
+   "status": "READY",
+   "text": "%flink.ssql(type=update)\n\nSELECT TICKER, COUNT(*) AS `COUNT`, window_start, window_end \nFROM TABLE(\n    HOP(TABLE stock_table, DESCRIPTOR(EVENT_TIME), INTERVAL '15' SECOND, INTERVAL '30' SECOND) \n)\nGROUP BY TICKER, window_start, window_end",
+   "id": "",
+   "config": {}
+  },
+  {
+   "settings": {
+    "params": {},
+    "forms": {}
+   },
+   "apps": [],
+   "status": "READY",
+   "text": "%flink.ssql\n\nDROP TABLE IF EXISTS s3_sink_table;\n\nCREATE TABLE s3_sink_table(\n    `TICKER` VARCHAR(4),\n    `COUNT` BIGINT NOT NULL\n)\nWITH(\n    'connector' = 'filesystem',\n    'path' = 's3a://ka-app-pmj/data',\n    'format' = 'json'\n)",
+   "id": "",
+   "config": {}
+  },
+  {
+   "settings": {
+    "params": {},
+    "forms": {}
+   },
+   "apps": [],
+   "status": "READY",
+   "config": {},
+   "text": "%flink.ssql(type=update, parallelism=1)\n\nINSERT INTO s3_sink_table \nSELECT TICKER, COUNT(*) AS `COUNT` \nFROM stock_table \nGROUP BY TICKER, HOP(EVENT_TIME, INTERVAL '25' SECOND, INTERVAL '30' SECOND)\n\n"
+  }
+ ],
+ "name": "Zeppelin Notebook",
+ "id": "",
+ "noteParams": {},
+ "noteForms": {},
+ "angularObjects": {},
+ "config": {
+  "isZeppelinNotebookCronEnable": false,
+  "looknfeel": "default",
+  "personalizedMode": "false"
+ },
+ "info": {}
+}
